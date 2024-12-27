@@ -7,19 +7,13 @@ class Documents:
         self.db = db
 
 
-    def agregar_documento(self, cliente_id, file_path, jurisdiccion_documento):
+    def agregar_documento(self, cliente_id, file_path, jurisdiccion_documento, procedimiento_documento):
         cliente = self.db.get_client_by_id(cliente_id)
         if not cliente:
             messagebox.showerror("Error", "Cliente no encontrado")
             return
         
         cliente_id, nombre_cliente, apellido_cliente, ciudad_cliente, email_cliente, telefono_cliente, tipo_cliente, fecha_insercion = cliente
-
-        # Solicitar tipo de documento
-        tipo_documento = simpledialog.askstring("Tipo de Documento", "Ingrese el tipo de documento (ejemplo: Recurso, Apelacion, Amparo...):")
-        if not tipo_documento:
-            messagebox.showerror("Error", "Debe ingresar tipo de documento")
-            return
 
         # Crear ruta de la carpeta del cliente en el escritorio
         desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
@@ -32,13 +26,13 @@ class Documents:
         os.makedirs(jurisdiccion_folder, exist_ok=True)  # Crear las carpetas si no existen
 
         # Renombrar el archivo
-        nuevo_nombre = f"{tipo_documento}-{ciudad_cliente}-{nombre_cliente}-{apellido_cliente}{os.path.splitext(file_path)[1]}"
+        nuevo_nombre = f"{procedimiento_documento}-{ciudad_cliente}-{nombre_cliente}-{apellido_cliente}{os.path.splitext(file_path)[1]}"
         nueva_ruta = os.path.join(jurisdiccion_folder, nuevo_nombre)
 
         # Insertar el documento en la base de datos
         try:
             print("Insertando documento en la base de datos: ", nueva_ruta)
-            self.db.add_document_db(nueva_ruta, cliente_id, nuevo_nombre, jurisdiccion_documento, tipo_documento)
+            self.db.add_document_db(nueva_ruta, cliente_id, nuevo_nombre, jurisdiccion_documento, procedimiento_documento)
             messagebox.showinfo("Documento Agregado", "Documento agregado exitosamente")
             # Copiar el archivo a la nueva ubicación
             try:

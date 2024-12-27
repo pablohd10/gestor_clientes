@@ -68,9 +68,14 @@ def agregar_documento():
     if not jurisdiccion:
         messagebox.showerror("Error", "Debe seleccionar una jurisdicción")
         return
-    
+
+    # Solicitar el procedimiento del documento
+    procedimiento = solicitar_procedimiento()
+    if not procedimiento:
+        messagebox.showerror("Error", "Debe seleccionar un procedimiento")
+        return
     documentos = Documents(database)
-    mostrar_estado(documentos.agregar_documento(cliente_id, file_path, jurisdiccion))
+    mostrar_estado(documentos.agregar_documento(cliente_id, file_path, jurisdiccion, procedimiento))
 
 def solicitar_jurisdiccion():
     seleccion = None  # Variable para almacenar la selección
@@ -103,6 +108,40 @@ def solicitar_jurisdiccion():
     ventana_jurisdiccion.transient(ventana)  # Hacer que esté vinculada a la ventana principal
     ventana_jurisdiccion.grab_set()         # Bloquear interacción con la ventana principal
     ventana_jurisdiccion.wait_window()      # Esperar hasta que la ventana emergente se cierre
+
+    return seleccion
+
+def solicitar_procedimiento():
+    seleccion = None  # Variable para almacenar la selección
+
+    def confirmar():
+        nonlocal seleccion  # Permitir modificar la variable local de solicitar_procedimiento
+        seleccion = combobox_procedimiento.get()
+        if not seleccion:
+            messagebox.showerror("Error", "Debe seleccionar una jurisdicción")
+        else:
+            ventana_procedimiento.destroy()
+
+    # Crear la ventana emergente
+    ventana_procedimiento = tk.Toplevel()
+    ventana_procedimiento.title("Seleccionar Jurisdicción")
+    ventana_procedimiento.geometry("300x150")
+    ventana_procedimiento.resizable(False, False)
+
+    tk.Label(ventana_procedimiento, text="Seleccione la jurisdicción:").pack(pady=10)
+    
+    # Opciones para el desplegable
+    opciones = ["Recurso", "Apelación", "Amparo", "Revisión", "Casación"]
+    combobox_procedimiento = ttk.Combobox(ventana_procedimiento, values=opciones, state="readonly")
+    combobox_procedimiento.pack(pady=5)
+
+    # Botón de confirmación
+    tk.Button(ventana_procedimiento, text="Confirmar", command=confirmar).pack(pady=10)
+
+    # Bloquear interacción con la ventana principal
+    ventana_procedimiento.transient(ventana)  # Hacer que esté vinculada a la ventana principal
+    ventana_procedimiento.grab_set()         # Bloquear interacción con la ventana principal
+    ventana_procedimiento.wait_window()      # Esperar hasta que la ventana emergente se cierre
 
     return seleccion
 
