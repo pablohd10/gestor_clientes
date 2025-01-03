@@ -1,6 +1,6 @@
 import os
 import shutil
-from tkinter import simpledialog, messagebox
+from tkinter import messagebox
 
 class Documents:
     def __init__(self, db):

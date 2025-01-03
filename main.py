@@ -69,11 +69,17 @@ def agregar_documento():
         messagebox.showerror("Error", "Debe seleccionar una jurisdicción")
         return
 
-    # Solicitar el procedimiento del documento
-    procedimiento = solicitar_procedimiento()
-    if not procedimiento:
-        messagebox.showerror("Error", "Debe seleccionar un procedimiento")
-        return
+    if jurisdiccion == "Datos Personales":
+        procedimiento = solicitar_datos_personales()
+        if not procedimiento:
+            messagebox.showerror("Error", "Debe seleccionar un dato personal")
+            return
+    else:
+        # Solicitar el procedimiento del documento
+        procedimiento = solicitar_procedimiento()
+        if not procedimiento:
+            messagebox.showerror("Error", "Debe seleccionar un procedimiento")
+            return
     documentos = Documents(database)
     mostrar_estado(documentos.agregar_documento(cliente_id, file_path, jurisdiccion, procedimiento))
 
@@ -91,13 +97,13 @@ def solicitar_jurisdiccion():
     # Crear la ventana emergente
     ventana_jurisdiccion = tk.Toplevel()
     ventana_jurisdiccion.title("Seleccionar Jurisdicción")
-    ventana_jurisdiccion.geometry("300x150")
+    ventana_jurisdiccion.geometry("400x200")
     ventana_jurisdiccion.resizable(False, False)
 
     tk.Label(ventana_jurisdiccion, text="Seleccione la jurisdicción:").pack(pady=10)
     
     # Opciones para el desplegable
-    opciones = ["Contencioso", "Civil", "Penal", "Laboral", "Administrativo"]
+    opciones = ["Contencioso", "Civil", "Penal", "Laboral", "Administrativo", "Mercantil", "Datos Personales"]
     combobox_jurisdiccion = ttk.Combobox(ventana_jurisdiccion, values=opciones, state="readonly")
     combobox_jurisdiccion.pack(pady=5)
 
@@ -118,17 +124,17 @@ def solicitar_procedimiento():
         nonlocal seleccion  # Permitir modificar la variable local de solicitar_procedimiento
         seleccion = combobox_procedimiento.get()
         if not seleccion:
-            messagebox.showerror("Error", "Debe seleccionar una jurisdicción")
+            messagebox.showerror("Error", "Debe seleccionar un procedimiento")
         else:
             ventana_procedimiento.destroy()
 
     # Crear la ventana emergente
     ventana_procedimiento = tk.Toplevel()
-    ventana_procedimiento.title("Seleccionar Jurisdicción")
-    ventana_procedimiento.geometry("300x150")
+    ventana_procedimiento.title("Seleccionar Procedimiento")
+    ventana_procedimiento.geometry("400x200")
     ventana_procedimiento.resizable(False, False)
 
-    tk.Label(ventana_procedimiento, text="Seleccione la jurisdicción:").pack(pady=10)
+    tk.Label(ventana_procedimiento, text="Seleccione el procedimiento:").pack(pady=10)
     
     # Opciones para el desplegable
     opciones = ["Recurso", "Apelación", "Amparo", "Revisión", "Casación"]
@@ -144,6 +150,41 @@ def solicitar_procedimiento():
     ventana_procedimiento.wait_window()      # Esperar hasta que la ventana emergente se cierre
 
     return seleccion
+
+def solicitar_datos_personales():
+    seleccion = None  # Variable para almacenar la selección
+
+    def confirmar():
+        nonlocal seleccion  # Permitir modificar la variable local de solicitar_datos_personales
+        seleccion = combobox_jurisdiccion.get()
+        if not seleccion:
+            messagebox.showerror("Error", "Debe seleccionar un dato personal")
+        else:
+            ventana_jurisdiccion.destroy()
+
+    # Crear la ventana emergente
+    ventana_jurisdiccion = tk.Toplevel()
+    ventana_jurisdiccion.title("Seleccionar Dato Personal")
+    ventana_jurisdiccion.geometry("400x200")
+    ventana_jurisdiccion.resizable(False, False)
+
+    tk.Label(ventana_jurisdiccion, text="Seleccione el dato personal:").pack(pady=10)
+    
+    # Opciones para el desplegable
+    opciones = ["DNI", "Pasaporte", "NIE", "Tarjeta de Residencia", "Número de Seguridad Social", "Nómina", "Contrato de Trabajo"]
+    combobox_jurisdiccion = ttk.Combobox(ventana_jurisdiccion, values=opciones, state="readonly")
+    combobox_jurisdiccion.pack(pady=5)
+
+    # Botón de confirmación
+    tk.Button(ventana_jurisdiccion, text="Confirmar", command=confirmar).pack(pady=10)
+
+    # Bloquear interacción con la ventana principal
+    ventana_jurisdiccion.transient(ventana)  # Hacer que esté vinculada a la ventana principal
+    ventana_jurisdiccion.grab_set()         # Bloquear interacción con la ventana principal
+    ventana_jurisdiccion.wait_window()      # Esperar hasta que la ventana emergente se cierre
+
+    return seleccion
+
 
 def mostrar_documentos():
     documentos = Documents(database)

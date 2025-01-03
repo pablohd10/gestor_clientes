@@ -1,4 +1,6 @@
 import sqlite3
+import sys
+import os
 
 class Database:
     def __init__(self):
@@ -82,6 +84,19 @@ class Database:
         except sqlite3.IntegrityError as e:
             print("Error: Documento", ruta, "ya existe")
             raise e
+
+    def get_resource_path(relative_path = "clientes.db"):
+        """ Get the absolute path to a resource, whether the app is packaged or not."""
+        # Check if running as a bundled app
+        if hasattr(sys, "_MEIPASS"):
+            # If yes, return the path within the extracted temporary directory
+            return os.path.join(sys._MEIPASS, relative_path)
+        # Otherwise, return the path in the current directory (development mode)
+        return os.path.join(os.path.abspath("."), relative_path)
+
+        # Example usage: Load a database file
+        # db_path = get_resource_path("clientes.db")
+        # print(f"Database path: {db_path}")
 
     def close(self):
         self.conn.close()
