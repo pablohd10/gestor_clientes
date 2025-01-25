@@ -1,6 +1,5 @@
 import os
 import shutil
-from tkinter import messagebox
 
 class Documents:
     def __init__(self, db):
@@ -10,8 +9,7 @@ class Documents:
     def agregar_documento(self, cliente_id, file_path, jurisdiccion_documento, procedimiento_documento):
         cliente = self.db.get_client_by_id(cliente_id)
         if not cliente:
-            messagebox.showerror("Error", "Cliente no encontrado")
-            return
+            return "Error", "Cliente no encontrado"
         
         cliente_id, nombre_cliente, apellido_cliente, ciudad_cliente, email_cliente, telefono_cliente, tipo_cliente, fecha_insercion = cliente
 
@@ -43,14 +41,12 @@ class Documents:
         # Obtener el ID del cliente seleccionado en la tabla
         selected_item = tree.selection()
         if not selected_item:
-            messagebox.showerror("Error", "Seleccione un cliente para asociar el documento")
-            return
+            return "Error", "Seleccione un cliente para asociar el documento"
 
         cliente_id = tree.item(selected_item)["values"][0]
         cliente = self.db.get_client_by_id(cliente_id)
         if not cliente:
-            messagebox.showerror("Error", "Cliente no encontrado")
-            return
+            return "Error", "Cliente no encontrado"
         
         cliente_id, nombre_cliente, apellido_cliente, ciudad_cliente, email_cliente, telefono_cliente, tipo_cliente, fecha_insercion = cliente
 
@@ -64,8 +60,7 @@ class Documents:
             cliente_folder = os.path.join(ciudad_folder, f"{nombre_cliente} {apellido_cliente}")
 
             if not os.path.exists(cliente_folder):
-                messagebox.showerror("Error", "La carpeta del cliente no existe.")
-                return
+                return "Error", "La carpeta del cliente no existe."
 
             # Abrir la carpeta del cliente
             os.system(f'open "{cliente_folder}"')  # macOS
@@ -74,7 +69,6 @@ class Documents:
             # os.system(f'xdg-open "{cliente_folder}"')  # Linux
 
         except Exception as e:
-            messagebox.showerror("Error", "Fallo al abrir la carpeta")
-            return
+            return "Error", "Fallo al abrir la carpeta"
 
         

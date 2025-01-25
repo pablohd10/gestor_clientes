@@ -298,6 +298,26 @@ database.inicializar_db()
 ventana = tk.Tk()
 ventana.title("Gestión de Clientes")
 
+# Configurar estilos
+style = ttk.Style(ventana)
+style.theme_use("clam")
+
+style.configure("TButton",
+                font=("Helvetica", 12, "bold"),
+                background="#4CAF50",  # Color de fondo
+                foreground="white",     # Color del texto
+                padding=10)
+
+style.map("TButton",
+            background=[("active", "#45A049")],  # Color de fondo al presionar
+            foreground=[("active", "white")])    # Color del texto al presionar
+
+style.configure("Treeview.Heading", font=("Helvetica", 12, "bold"))
+
+style.configure("TEntry",
+                font=("Helvetica", 12),
+                padding=5)
+
 # Campo de búsqueda dinámico
 tk.Label(ventana, text="Buscar Cliente  ---->").grid(row=0, column=0, columnspan=2)
 entry_buscar = tk.Entry(ventana)
