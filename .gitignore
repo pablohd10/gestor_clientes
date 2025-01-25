@@ -1,0 +1,4 @@
+build/*
+dist/*
+clients_manager.spec
+observer.py

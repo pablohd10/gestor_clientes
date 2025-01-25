@@ -1,0 +1,1 @@
+pyinstaller --onefile --windowed --icon=logo/logo.icns --add-data "logo/logo.icns:." --name clients_manager src/main.py --noconfirm
