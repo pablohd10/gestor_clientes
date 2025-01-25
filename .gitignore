@@ -1,4 +1,5 @@
 build/*
 dist/*
+pruebas/*
 clients_manager.spec
 observer.py

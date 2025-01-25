@@ -1,5 +1,5 @@
-from src.validations import validate_email
-from src.validations import validate_telefono
+from validations import validate_email
+from validations import validate_telefono
 import os
 import shutil 
 

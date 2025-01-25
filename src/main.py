@@ -1,9 +1,9 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import sqlite3
-from src.documents import Documents
-from src.database import Database
-from src.clientes import Clientes
+from documents import Documents
+from database import Database
+from clientes import Clientes
 import os
 
 def mostrar_estado(texto):
@@ -253,7 +253,9 @@ def exportar_base_datos():
         return
     try:
         database.close()  # Cerrar conexión antes de copiar
-        with open("clientes.db", "rb") as db_origen:
+        user_home = os.path.expanduser("~")
+        db_dir = os.path.join(user_home, "Desktop", "Clientes")
+        with open(db_dir, "rb") as db_origen:
             with open(ruta_exportacion, "wb") as db_destino:
                 db_destino.write(db_origen.read())
         messagebox.showinfo("Éxito", "Base de datos exportada correctamente.")
@@ -273,7 +275,9 @@ def importar_base_datos():
     try:
         database.close()  # Cerrar conexión actual antes de sobrescribir
         with open(ruta_importacion, "rb") as db_origen:
-            with open("clientes.db", "wb") as db_destino:
+            user_home = os.path.expanduser("~")
+            db_dir = os.path.join(user_home, "Desktop", "Clientes")
+            with open(db_dir, "wb") as db_destino:
                 db_destino.write(db_origen.read())
         messagebox.showinfo("Éxito", "Base de datos importada correctamente.")
         # Reconectar y reconfigurar la base de datos importada
@@ -297,6 +301,26 @@ database.inicializar_db()
 # Crear la ventana principal
 ventana = tk.Tk()
 ventana.title("Gestión de Clientes")
+
+# Configurar estilos
+style = ttk.Style(ventana)
+style.theme_use("clam")
+
+style.configure("TButton",
+                font=("Helvetica", 12, "bold"),
+                background="#4CAF50",  # Color de fondo
+                foreground="white",     # Color del texto
+                padding=10)
+
+style.map("TButton",
+            background=[("active", "#45A049")],  # Color de fondo al presionar
+            foreground=[("active", "white")])    # Color del texto al presionar
+
+style.configure("Treeview.Heading", font=("Helvetica", 12, "bold"))
+
+style.configure("TEntry",
+                font=("Helvetica", 12),
+                padding=5)
 
 # Campo de búsqueda dinámico
 tk.Label(ventana, text="Buscar Cliente  ---->").grid(row=0, column=0, columnspan=2)
@@ -352,4 +376,10 @@ tree.column("ID", width=50)
 tk.Button(ventana, text="Exportar Base de Datos", command=exportar_base_datos).grid(row=20, column=0, columnspan=1)
 tk.Button(ventana, text="Importar Base de Datos", command=importar_base_datos).grid(row=20, column=1, columnspan=1)
 
-ventana.mainloop() # Iniciar la interfaz
+try:
+    ventana.mainloop() # Iniciar la interfaz
+except Exception as e:
+    print(f"Error: {str(e)}")
+finally:
+    database.close()
+
