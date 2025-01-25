@@ -1,9 +1,9 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import sqlite3
-from src.documents import Documents
-from src.database import Database
-from src.clientes import Clientes
+from documents import Documents
+from database import Database
+from clientes import Clientes
 import os
 
 def mostrar_estado(texto):
@@ -253,7 +253,9 @@ def exportar_base_datos():
         return
     try:
         database.close()  # Cerrar conexión antes de copiar
-        with open("clientes.db", "rb") as db_origen:
+        user_home = os.path.expanduser("~")
+        db_dir = os.path.join(user_home, "Desktop", "Clientes")
+        with open(db_dir, "rb") as db_origen:
             with open(ruta_exportacion, "wb") as db_destino:
                 db_destino.write(db_origen.read())
         messagebox.showinfo("Éxito", "Base de datos exportada correctamente.")
@@ -273,7 +275,9 @@ def importar_base_datos():
     try:
         database.close()  # Cerrar conexión actual antes de sobrescribir
         with open(ruta_importacion, "rb") as db_origen:
-            with open("clientes.db", "wb") as db_destino:
+            user_home = os.path.expanduser("~")
+            db_dir = os.path.join(user_home, "Desktop", "Clientes")
+            with open(db_dir, "wb") as db_destino:
                 db_destino.write(db_origen.read())
         messagebox.showinfo("Éxito", "Base de datos importada correctamente.")
         # Reconectar y reconfigurar la base de datos importada
@@ -300,23 +304,45 @@ ventana.title("Gestión de Clientes")
 
 # Configurar estilos
 style = ttk.Style(ventana)
-style.theme_use("clam")
 
+# Estilo de los botones
 style.configure("TButton",
                 font=("Helvetica", 12, "bold"),
                 background="#4CAF50",  # Color de fondo
                 foreground="white",     # Color del texto
-                padding=10)
+                padding=(10, 5),        # Relleno de botones
+                relief="flat",          # Sin bordes elevados
+                borderwidth=0,          # Sin bordes
+                focuscolor="#45A049",   # Color al hacer foco
+                width=20)               # Ancho fijo del botón
 
 style.map("TButton",
-            background=[("active", "#45A049")],  # Color de fondo al presionar
-            foreground=[("active", "white")])    # Color del texto al presionar
+          background=[("active", "#45A049")],  # Color de fondo al presionar
+          foreground=[("active", "white")])    # Color del texto al presionar
 
-style.configure("Treeview.Heading", font=("Helvetica", 12, "bold"))
-
+# Estilo de los campos de entrada
 style.configure("TEntry",
                 font=("Helvetica", 12),
-                padding=5)
+                padding=5,
+                relief="flat",          # Bordes suaves
+                foreground="black",     # Color del texto
+                background="#f4f4f4",   # Fondo suave
+                fieldbackground="#f4f4f4",  # Fondo suave cuando el campo está vacío
+                insertbackground="black", # Color del cursor
+                width=20)               # Ancho fijo de las entradas
+
+# Estilo de las cabeceras de la tabla
+style.configure("Treeview.Heading", 
+                font=("Helvetica", 12, "bold"),
+                background="#f1f1f1",   # Fondo claro para las cabeceras
+                foreground="black")     # Color del texto de las cabeceras
+               
+
+# Estilo de las filas de la tabla
+style.configure("Treeview",
+                background="#ffffff",   # Fondo blanco
+                foreground="black",     # Color del texto
+                fieldbackground="#f9f9f9")  # Fondo gris claro para las filas
 
 # Campo de búsqueda dinámico
 tk.Label(ventana, text="Buscar Cliente  ---->").grid(row=0, column=0, columnspan=2)
@@ -372,4 +398,10 @@ tree.column("ID", width=50)
 tk.Button(ventana, text="Exportar Base de Datos", command=exportar_base_datos).grid(row=20, column=0, columnspan=1)
 tk.Button(ventana, text="Importar Base de Datos", command=importar_base_datos).grid(row=20, column=1, columnspan=1)
 
-ventana.mainloop() # Iniciar la interfaz
+try:
+    ventana.mainloop() # Iniciar la interfaz
+except Exception as e:
+    print(f"Error: {str(e)}")
+finally:
+    database.close()
+

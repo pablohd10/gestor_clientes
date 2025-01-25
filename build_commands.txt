@@ -1,5 +1,5 @@
-# Empaquetar la aplicacion y crear el .app y ejecutable
+# Empaquetar y crear ejecutable y .app
 pyinstaller --onefile --windowed --icon=logo/logo.icns --add-data "logo/logo.icns:." --name clients_manager src/main.py --noconfirm
 
-# Distribuir la aplicacion y crear el .dmg
+# Crear .dmg para distribuir
 create-dmg --app-drop-link 350 150 clients_manager.dmg dist/clients_manager.app

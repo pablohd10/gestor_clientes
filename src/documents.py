@@ -9,7 +9,7 @@ class Documents:
     def agregar_documento(self, cliente_id, file_path, jurisdiccion_documento, procedimiento_documento):
         cliente = self.db.get_client_by_id(cliente_id)
         if not cliente:
-            return "Error", "Cliente no encontrado"
+            return "Error: Cliente no encontrado."
         
         cliente_id, nombre_cliente, apellido_cliente, ciudad_cliente, email_cliente, telefono_cliente, tipo_cliente, fecha_insercion = cliente
 
@@ -61,7 +61,7 @@ class Documents:
 
             if not os.path.exists(cliente_folder):
                 return "Error", "La carpeta del cliente no existe."
-
+            
             # Abrir la carpeta del cliente
             os.system(f'open "{cliente_folder}"')  # macOS
             # Alternativas para otros sistemas operativos:
