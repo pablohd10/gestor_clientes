@@ -2,4 +2,5 @@ build/*
 dist/*
 pruebas/*
 clients_manager.spec
+clients_manager.dmg
 observer.py
