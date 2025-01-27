@@ -1,15 +1,15 @@
 import sqlite3
-
 import os
 
 class Database:
     def __init__(self):
-        # Directorio del usuario
+        # Crear directorio Clientes en el escritorio del usuario
         user_home = os.path.expanduser("~")
         db_dir = os.path.join(user_home, "Desktop", "Clientes")
         if not os.path.exists(db_dir):
             os.makedirs(db_dir) # Crea el directorio si no existe
         
+        # Conexión a la base de datos
         self.conn = sqlite3.connect(os.path.join(db_dir, "clientes.db"))
         self.cursor = self.conn.cursor()
 
@@ -46,6 +46,10 @@ class Database:
                     )""")
                         
         self.conn.commit()
+    
+    def fetch_all_clients_db(self):
+        self.cursor.execute("SELECT Nombre, Apellido, Ciudad, Email, Telefono, Tipo, FechaCreacion FROM Clientes")
+        return self.cursor.fetchall()
 
     def add_client_db(self, nombre, apellido, ciudad, email, telefono, tipo):
         try:
@@ -67,8 +71,15 @@ class Database:
         
     def get_client_by_id(self, client_id):
         try:
-            self.cursor.execute("SELECT * FROM Clientes WHERE ID = ?", (client_id,))
+            self.cursor.execute("SELECT Nombre, Apellido, Ciudad, Email, Telefono, Tipo, FechaCreacion FROM Clientes WHERE ID = ?", (client_id,))
             return self.cursor.fetchone()
+        except sqlite3.Error:
+            return None
+
+    def get_client_id(self, nombre, apellido, ciudad, tipo):
+        try:
+            self.cursor.execute("SELECT ID FROM Clientes WHERE Nombre = ? AND Apellido = ? AND Ciudad = ? AND Tipo = ?", (nombre, apellido, ciudad, tipo))
+            return self.cursor.fetchone()[0]
         except sqlite3.Error:
             return None
         
@@ -81,7 +92,7 @@ class Database:
             return "Error: Cliente no encontrado"
 
     def build_search_query(self, palabras):
-        query = "SELECT * FROM Clientes WHERE"
+        query = "SELECT Nombre, Apellido, Ciudad, Email, Telefono, Tipo, FechaCreacion FROM Clientes WHERE"
         params = []
         if len(palabras) == 1:
             query += " (Nombre LIKE ? OR Apellido LIKE ? OR Ciudad LIKE ?)"

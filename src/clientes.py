@@ -1,5 +1,5 @@
-from validations import validate_email
-from validations import validate_telefono
+from src.validations import validate_email
+from src.validations import validate_telefono
 import os
 import shutil 
 
@@ -19,6 +19,15 @@ class Clientes:
         email = email.lower() if email else email
         tipo = tipo.capitalize()
 
+         # Crear ruta de la carpeta del cliente en el escritorio
+        desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
+        main_folder = os.path.join(desktop_path, "Clientes")
+        tipo_folder = os.path.join(main_folder, tipo)
+        ciudad_folder = os.path.join(tipo_folder, ciudad)
+        cliente_folder = os.path.join(ciudad_folder, f"{nombre} {apellido}")
+
+        os.makedirs(cliente_folder, exist_ok=True)  # Crear las carpetas si no existen
+
         # Validar que el email tenga un formato correcto
         if email and not validate_email(email):
             return "Error: Email inválido. Formato no válido."
@@ -30,7 +39,7 @@ class Clientes:
         # Insertar el cliente en la base de datos
         return self.db.add_client_db(nombre, apellido, ciudad, email, telefono, tipo)
     
-    def eliminar_cliente(self, id, nombre, apellido, ciudad, tipo):
+    def eliminar_cliente(self, nombre, apellido, ciudad, tipo):
         # Eliminar cliente del sistema de archivos
         ruta_base = os.path.join(os.path.expanduser("~"), "Desktop", "Clientes")
         cliente_folder = os.path.join(ruta_base, tipo.capitalize(), ciudad.capitalize(), f"{nombre.capitalize()} {apellido.capitalize()}")
@@ -43,6 +52,9 @@ class Clientes:
                 print(f"Carpeta del cliente {nombre} {apellido} eliminada correctamente.")
             except Exception as e:
                 return f"Error al eliminar la carpeta del cliente: {e}"
+
+        # Obtenemos el id del cliente
+        id = self.db.get_client_id(nombre, apellido, ciudad, tipo)
 
         # Eliminar cliente de la base de datos
         return self.db.delete_client_db(id)

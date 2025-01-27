@@ -6,12 +6,9 @@ class Documents:
         self.db = db
 
 
-    def agregar_documento(self, cliente_id, file_path, jurisdiccion_documento, procedimiento_documento):
-        cliente = self.db.get_client_by_id(cliente_id)
-        if not cliente:
-            return "Error: Cliente no encontrado."
+    def agregar_documento(self, nombre_cliente, apellido_cliente, ciudad_cliente, tipo_cliente, file_path, jurisdiccion_documento, procedimiento_documento):
         
-        cliente_id, nombre_cliente, apellido_cliente, ciudad_cliente, email_cliente, telefono_cliente, tipo_cliente, fecha_insercion = cliente
+        cliente_id = self.db.get_client_id(nombre_cliente, apellido_cliente, ciudad_cliente, tipo_cliente)
 
         # Crear ruta de la carpeta del cliente en el escritorio
         desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
@@ -37,19 +34,8 @@ class Documents:
          # Insertar el cliente en la base de datos
         return self.db.add_document_db(nueva_ruta, cliente_id, nuevo_nombre, jurisdiccion_documento, procedimiento_documento)
 
-    def mostrar_documentos(self, tree):
-        # Obtener el ID del cliente seleccionado en la tabla
-        selected_item = tree.selection()
-        if not selected_item:
-            return "Error", "Seleccione un cliente para asociar el documento"
-
-        cliente_id = tree.item(selected_item)["values"][0]
-        cliente = self.db.get_client_by_id(cliente_id)
-        if not cliente:
-            return "Error", "Cliente no encontrado"
+    def mostrar_documentos(self, nombre_cliente, apellido_cliente, ciudad_cliente, tipo_cliente):
         
-        cliente_id, nombre_cliente, apellido_cliente, ciudad_cliente, email_cliente, telefono_cliente, tipo_cliente, fecha_insercion = cliente
-
         # Consultar la ciudad del cliente para construir la ruta de la carpeta
         try:
             # Construir la ruta de la carpeta del cliente
