@@ -5,7 +5,6 @@ class Documents:
     def __init__(self, db):
         self.db = db
 
-
     def agregar_documento(self, nombre_cliente, apellido_cliente, ciudad_cliente, tipo_cliente, file_path, jurisdiccion_documento, procedimiento_documento):
         
         cliente_id = self.db.get_client_id(nombre_cliente, apellido_cliente, ciudad_cliente, tipo_cliente)
@@ -35,7 +34,7 @@ class Documents:
         return self.db.add_document_db(nueva_ruta, cliente_id, nuevo_nombre, jurisdiccion_documento, procedimiento_documento)
 
     def mostrar_documentos(self, nombre_cliente, apellido_cliente, ciudad_cliente, tipo_cliente):
-        
+
         # Consultar la ciudad del cliente para construir la ruta de la carpeta
         try:
             # Construir la ruta de la carpeta del cliente

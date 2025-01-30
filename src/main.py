@@ -1,11 +1,271 @@
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, messagebox
+from database import Database
+import os
+import shutil 
+import re
 import sqlite3
-from src.documents import Documents
-from src.database import Database
-from src.clientes import Clientes
 import os
 
+class Database:
+    def __init__(self):
+        # Crear directorio Clientes en el escritorio del usuario
+        user_home = os.path.expanduser("~")
+        db_dir = os.path.join(user_home, "Desktop", "Clientes")
+        if not os.path.exists(db_dir):
+            os.makedirs(db_dir) # Crea el directorio si no existe
+        
+        # Conexión a la base de datos
+        self.conn = sqlite3.connect(os.path.join(db_dir, "clientes.db"))
+        self.cursor = self.conn.cursor()
+
+    def inicializar_db(self):
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS Clientes (
+                ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                Nombre TEXT NOT NULL CHECK (LENGTH(Nombre) <= 50),
+                Apellido TEXT NOT NULL CHECK (LENGTH(Apellido) <= 50),
+                Ciudad TEXT NOT NULL CHECK (LENGTH(Ciudad) <= 50),
+                Email TEXT CHECK (LENGTH(Email) <= 50),
+                Telefono TEXT CHECK (LENGTH(Telefono) <= 15),
+                Tipo TEXT NOT NULL CHECK (Tipo IN ('Turno', 'Privado')),
+                FechaCreacion DATE DEFAULT CURRENT_DATE,
+                UNIQUE (Nombre, Apellido, Ciudad, Tipo)
+            )""")
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS Documentos (
+                RutaArchivo TEXT PRIMARY KEY,
+                ClienteID INTEGER NOT NULL,
+                NombreDocumento TEXT NOT NULL,
+                Jurisdiccion TEXT NOT NULL,
+                TipoDocumento TEXT NOT NULL,
+                FechaCreacion DATE DEFAULT CURRENT_DATE,
+                FOREIGN KEY (ClienteID) REFERENCES Clientes(ID) ON DELETE CASCADE
+            )""")
+        self.cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS Guardias(
+                    Fecha DATE PRIMARY KEY,
+                    Ciudad TEXT NOT NULL CHECK (LENGTH(Ciudad) <= 50),
+                    ClienteID INTEGER NOT NULL,
+                    TipoGuardia TEXT NOT NULL,
+                    FOREIGN KEY (ClienteID) REFERENCES Clientes(ID) ON DELETE CASCADE
+                    )""")
+                        
+        self.conn.commit()
+    
+    def fetch_all_clients_db(self):
+        self.cursor.execute("SELECT Nombre, Apellido, Ciudad, Email, Telefono, Tipo, FechaCreacion FROM Clientes")
+        return self.cursor.fetchall()
+
+    def add_client_db(self, nombre, apellido, ciudad, email, telefono, tipo):
+        try:
+            self.cursor.execute("INSERT INTO Clientes (Nombre, Apellido, Ciudad, Email, Telefono, Tipo) VALUES (?, ?, ?, ?, ?, ?)",
+                                (nombre, apellido, ciudad, email, telefono, tipo))
+            self.conn.commit()
+            return "Cliente " + nombre + " " + apellido+" agregado"
+        except sqlite3.IntegrityError:
+            return "Error: Cliente " + nombre + " " + apellido + " ya existe"
+        
+    def get_client_by_id(self, client_id):
+        try:
+            self.cursor.execute("SELECT Nombre, Apellido, Ciudad, Email, Telefono, Tipo, FechaCreacion FROM Clientes WHERE ID = ?", (client_id,))
+            return self.cursor.fetchone()
+        except sqlite3.Error:
+            return None
+
+    def get_client_id(self, nombre, apellido, ciudad, tipo):
+        try:
+            self.cursor.execute("SELECT ID FROM Clientes WHERE Nombre = ? AND Apellido = ? AND Ciudad = ? AND Tipo = ?", (nombre, apellido, ciudad, tipo))
+            return self.cursor.fetchone()[0]
+        except sqlite3.Error:
+            return None
+        
+    def delete_client_db(self, client_id):
+        try:
+            self.cursor.execute("DELETE FROM Clientes WHERE ID = ?", (client_id,))
+            self.conn.commit()
+            return "Cliente eliminado"
+        except sqlite3.Error:
+            return "Error: Cliente no encontrado"
+
+    def build_search_query(self, palabras):
+        query = "SELECT Nombre, Apellido, Ciudad, Email, Telefono, Tipo, FechaCreacion FROM Clientes WHERE"
+        params = []
+        if len(palabras) == 1:
+            query += " (Nombre LIKE ? OR Apellido LIKE ? OR Ciudad LIKE ?)"
+            params = ['%' + palabras[0] + '%'] * 3
+        elif len(palabras) == 2:
+            query += " (Nombre LIKE ? AND Apellido LIKE ?) OR (Nombre LIKE ? AND Ciudad LIKE ?) OR (Apellido LIKE ? AND Ciudad LIKE ?)"
+            params = ['%' + palabras[0] + '%', '%' + palabras[1] + '%'] * 3
+        else:
+            query += " (Nombre LIKE ? AND Apellido LIKE ? AND Ciudad LIKE ?)"
+            params = ['%' + palabras[0] + '%', '%' + palabras[1] + '%', '%' + palabras[2] + '%']
+        return query, params
+
+    def search_clients_db(self, query, params):
+        self.cursor.execute(query, params)
+        return self.cursor.fetchall()
+
+    def connect(self):
+        user_home = os.path.expanduser("~")
+        db_dir = os.path.join(user_home, "Desktop", "Clientes")
+        if not os.path.exists(db_dir):
+            os.makedirs(db_dir)
+        self.conn = sqlite3.connect(os.path.join(db_dir, "clientes.db"))
+        self.cursor = self.conn.cursor()
+
+    def close(self):
+        self.conn.close()
+
+import re
+import os
+import shutil
+
+def validate_email(email):
+    """
+    Valida una dirección de email.
+    Retorna True si es válida, False si no.
+    """
+    if not isinstance(email, str) or len(email) > 320:
+        return False
+    
+    # Validación carácter por carácter antes de usar el regex
+    for char in email:
+        if char.isspace():
+            return False
+    
+    # Expresión regular para validar emails
+    pattern = r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"
+    match = re.match(pattern, email)
+    if match:
+        return True
+    return False
+
+def validate_telefono(telefono):
+    """
+    Valida un número de teléfono.
+    Retorna True si es válido, False si no.
+    """
+    if not isinstance(telefono, str) or len(telefono) > 15:
+        return False
+
+    # Validar que no contenga caracteres que no sean números
+    for char in telefono:
+        if not char.isdigit():
+            return False
+
+    # Expresión regular para validar teléfonos
+    pattern = r"^\d{7,15}$"
+    match = re.match(pattern, telefono)
+    if match:
+        return True
+    return False
+
+
+class Clientes:
+    def __init__(self, db):
+        self.db = db
+        self.clientes_path = os.path.join(os.path.expanduser("~"), "Desktop")
+        self.base_folder = os.path.join(self.clientes_path, "Clientes")
+        if not os.path.exists(self.base_folder):
+            os.makedirs(self.base_folder)
+
+    def agregar_cliente(self, nombre, apellido, ciudad, email, telefono, tipo):
+        # Validar datos del cliente paso a paso
+        if not nombre:
+            return "Error: El nombre es obligatorio."
+        if not apellido:
+            return "Error: El apellido es obligatorio."
+        if not ciudad:
+            return "Error: La ciudad es obligatoria."
+        if not tipo:
+            return "Error: El tipo es obligatorio."
+
+        if email:
+            if not validate_email(email):
+                return "Error: Email inválido. Formato no válido."
+        if telefono:
+            if not validate_telefono(telefono):
+                return "Error: Teléfono inválido. Debe contener entre 7 y 15 dígitos"
+
+        # Normalizar datos por separado
+        nombre = self.capitalizar_palabra(nombre)
+        apellido = self.capitalizar_palabra(apellido)
+        ciudad = self.capitalizar_palabra(ciudad)
+        email = email.lower() if email else email
+        tipo = self.capitalizar_palabra(tipo)
+
+        # Crear carpeta paso a paso
+        cliente_path = self.crear_carpeta_cliente(nombre, apellido, ciudad, tipo)
+        if not cliente_path:
+            return "Error: No se pudo crear la carpeta del cliente."
+
+        # Guardar cliente en la base de datos
+        resultado = self.db.add_client_db(nombre, apellido, ciudad, email, telefono, tipo)
+        if not resultado:
+            return "Error: No se pudo agregar el cliente a la base de datos."
+        return "Cliente agregado correctamente."
+
+    def eliminar_cliente(self, nombre, apellido, ciudad, tipo):
+        # Normalizar datos paso a paso
+        nombre = self.capitalizar_palabra(nombre)
+        apellido = self.capitalizar_palabra(apellido)
+        ciudad = self.capitalizar_palabra(ciudad)
+        tipo = self.capitalizar_palabra(tipo)
+
+        # Construir ruta de cliente
+        cliente_path = os.path.join(self.base_folder, tipo, ciudad, f"{nombre} {apellido}")
+        if not self.eliminar_carpeta(cliente_path):
+            return "Error: No se pudo eliminar la carpeta del cliente."
+
+        # Obtener ID y eliminar cliente de la base de datos
+        client_id = self.db.get_client_id(nombre, apellido, ciudad, tipo)
+        if not client_id:
+            return "Error: No se encontró el cliente en la base de datos."
+        resultado = self.db.delete_client_db(client_id)
+        if not resultado:
+            return "Error: No se pudo eliminar el cliente de la base de datos."
+        return "Cliente eliminado correctamente."
+
+    def capitalizar_palabra(self, palabra):
+        """Capitaliza la primera letra de una palabra."""
+        if not palabra or not isinstance(palabra, str):
+            return ""
+        return palabra[0].upper() + palabra[1:].lower()
+
+    def crear_carpeta_cliente(self, nombre, apellido, ciudad, tipo):
+        tipo_path = os.path.join(self.base_folder, tipo)
+        ciudad_path = os.path.join(tipo_path, ciudad)
+        cliente_path = os.path.join(ciudad_path, f"{nombre} {apellido}")
+        try:
+            if not os.path.exists(tipo_path):
+                os.makedirs(tipo_path)
+            if not os.path.exists(ciudad_path):
+                os.makedirs(ciudad_path)
+            if not os.path.exists(cliente_path):
+                os.makedirs(cliente_path)
+            return cliente_path
+        except Exception as e:
+            print(f"Error al crear carpeta: {e}")
+            return None
+
+    def eliminar_carpeta(self, path):
+        if os.path.exists(path):
+            try:
+                for file in os.listdir(path):
+                    file_path = os.path.join(path, file)
+                    if os.path.isfile(file_path):
+                        os.remove(file_path)
+                    else:
+                        shutil.rmtree(file_path)
+                shutil.rmtree(path)
+                return True
+            except Exception as e:
+                print(f"Error al eliminar carpeta: {e}")
+        return False
+
+        
+        
 def mostrar_estado(texto):
     # Verifica si el texto contiene la palabra "Error"
     if texto == None:
@@ -103,201 +363,6 @@ def cargar_todos_los_clientes():
     # Insertar los clientes en la tabla
     for cliente in clientes:
         tree.insert("", "end", values=cliente)
-        
-def agregar_documento():
-    selected_item = tree.selection()
-    if not selected_item:
-        messagebox.showerror("Error", "Seleccione un cliente para asociar el documento")
-        return
-    
-     # Si se ha selccionado mas de un cliente, mostrar error
-    if len(selected_item) > 1:
-        messagebox.showerror("Error", "Seleccione solo un cliente para asociar el documento")
-        return
-    
-    file_path = filedialog.askopenfilename(title="Seleccionar Documento")
-    if not file_path:
-        return  # Si el usuario cancela, no hacer nada
-
-    
-    nombre, apellido, ciudad, tipo = obtener_cliente_seleccionado()
-
-    # Solicitar la jurisdicción del documento
-    jurisdiccion = solicitar_jurisdiccion()
-    if not jurisdiccion:
-        messagebox.showerror("Error", "Debe seleccionar una jurisdicción")
-        return
-
-    if jurisdiccion == "Datos Personales":
-        procedimiento = solicitar_datos_personales()
-        if not procedimiento:
-            messagebox.showerror("Error", "Debe seleccionar un dato personal")
-            return
-    else:
-        # Solicitar el procedimiento del documento
-        procedimiento = solicitar_procedimiento()
-        if not procedimiento:
-            messagebox.showerror("Error", "Debe seleccionar un procedimiento")
-            return
-    documentos = Documents(database)
-    mostrar_estado(documentos.agregar_documento(nombre, apellido, ciudad, tipo, file_path, jurisdiccion, procedimiento))
-
-def solicitar_jurisdiccion():
-    seleccion = None  # Variable para almacenar la selección
-
-    def confirmar():
-        nonlocal seleccion  # Permitir modificar la variable local de solicitar_jurisdiccion
-        seleccion = combobox_jurisdiccion.get()
-        if not seleccion:
-            messagebox.showerror("Error", "Debe seleccionar una jurisdicción")
-        else:
-            ventana_jurisdiccion.destroy()
-
-    # Crear la ventana emergente
-    ventana_jurisdiccion = tk.Toplevel()
-    ventana_jurisdiccion.title("Seleccionar Jurisdicción")
-    ventana_jurisdiccion.geometry("400x200")
-    ventana_jurisdiccion.resizable(False, False)
-
-    ttk.Label(ventana_jurisdiccion, text="Seleccione la jurisdicción:").pack(pady=10)
-    
-    # Opciones para el desplegable
-    opciones = ["Contencioso", "Civil", "Penal", "Laboral", "Administrativo", "Mercantil", "Datos Personales"]
-    combobox_jurisdiccion = ttk.Combobox(ventana_jurisdiccion, values=opciones, state="readonly")
-    combobox_jurisdiccion.pack(pady=5)
-
-    # Botón de confirmación
-    ttk.Button(ventana_jurisdiccion, text="Confirmar", command=confirmar).pack(pady=10)
-
-    # Bloquear interacción con la ventana principal
-    ventana_jurisdiccion.transient(ventana)  # Hacer que esté vinculada a la ventana principal
-    ventana_jurisdiccion.grab_set()         # Bloquear interacción con la ventana principal
-    ventana_jurisdiccion.wait_window()      # Esperar hasta que la ventana emergente se cierre
-
-    return seleccion
-
-def solicitar_procedimiento():
-    seleccion = None  # Variable para almacenar la selección
-
-    def confirmar():
-        nonlocal seleccion  # Permitir modificar la variable local de solicitar_procedimiento
-        seleccion = combobox_procedimiento.get()
-        if not seleccion:
-            messagebox.showerror("Error", "Debe seleccionar un procedimiento")
-        else:
-            ventana_procedimiento.destroy()
-
-    # Crear la ventana emergente
-    ventana_procedimiento = tk.Toplevel()
-    ventana_procedimiento.title("Seleccionar Procedimiento")
-    ventana_procedimiento.geometry("400x200")
-    ventana_procedimiento.resizable(False, False)
-
-    tk.Label(ventana_procedimiento, text="Seleccione el procedimiento:").pack(pady=10)
-    
-    # Opciones para el desplegable
-    opciones = ["Recurso", "Apelación", "Amparo", "Revisión", "Casación"]
-    combobox_procedimiento = ttk.Combobox(ventana_procedimiento, values=opciones, state="readonly")
-    combobox_procedimiento.pack(pady=5)
-
-    # Botón de confirmación
-    ttk.Button(ventana_procedimiento, text="Confirmar", command=confirmar).pack(pady=10)
-
-    # Bloquear interacción con la ventana principal
-    ventana_procedimiento.transient(ventana)  # Hacer que esté vinculada a la ventana principal
-    ventana_procedimiento.grab_set()         # Bloquear interacción con la ventana principal
-    ventana_procedimiento.wait_window()      # Esperar hasta que la ventana emergente se cierre
-
-    return seleccion
-
-def solicitar_datos_personales():
-    seleccion = None  # Variable para almacenar la selección
-
-    def confirmar():
-        nonlocal seleccion  # Permitir modificar la variable local de solicitar_datos_personales
-        seleccion = combobox_jurisdiccion.get()
-        if not seleccion:
-            messagebox.showerror("Error", "Debe seleccionar un dato personal")
-        else:
-            ventana_jurisdiccion.destroy()
-
-    # Crear la ventana emergente
-    ventana_jurisdiccion = tk.Toplevel()
-    ventana_jurisdiccion.title("Seleccionar Dato Personal")
-    ventana_jurisdiccion.geometry("400x200")
-    ventana_jurisdiccion.resizable(False, False)
-
-    ttk.Label(ventana_jurisdiccion, text="Seleccione el dato personal:").pack(pady=10)
-    
-    # Opciones para el desplegable
-    opciones = ["DNI", "Pasaporte", "NIE", "Tarjeta de Residencia", "Número de Seguridad Social", "Nómina", "Contrato de Trabajo"]
-    combobox_jurisdiccion = ttk.Combobox(ventana_jurisdiccion, values=opciones, state="readonly")
-    combobox_jurisdiccion.pack(pady=5)
-
-    # Botón de confirmación
-    ttk.Button(ventana_jurisdiccion, text="Confirmar", command=confirmar).pack(pady=10)
-
-    # Bloquear interacción con la ventana principal
-    ventana_jurisdiccion.transient(ventana)  # Hacer que esté vinculada a la ventana principal
-    ventana_jurisdiccion.grab_set()         # Bloquear interacción con la ventana principal
-    ventana_jurisdiccion.wait_window()      # Esperar hasta que la ventana emergente se cierre
-
-    return seleccion
-
-def mostrar_documentos():
-     # Obtener el ID del cliente seleccionado en la tabla
-    selected_item = tree.selection()
-    if not selected_item:
-        return "Error", "Seleccione un cliente para asociar el documento"
-
-    nombre, apellido, ciudad, tipo = obtener_cliente_seleccionado()
-
-    documentos = Documents(database)
-    mostrar_estado(documentos.mostrar_documentos(nombre, apellido, ciudad, tipo))
-
-        
-def exportar_base_datos():
-    """Permite exportar la base de datos a un archivo seleccionado por el usuario."""
-    ruta_exportacion = filedialog.asksaveasfilename(
-        title="Exportar Base de Datos",
-        defaultextension=".db",
-        filetypes=[("Archivos SQLite", "*.db"), ("Todos los archivos", "*.*")]
-    )
-    if not ruta_exportacion:
-        return
-    try:
-        database.close()  # Cerrar conexión antes de copiar
-        user_home = os.path.expanduser("~")
-        db_dir = os.path.join(user_home, "Desktop", "Clientes")
-        with open(db_dir, "rb") as db_origen:
-            with open(ruta_exportacion, "wb") as db_destino:
-                db_destino.write(db_origen.read())
-        messagebox.showinfo("Éxito", "Base de datos exportada correctamente.")
-    except Exception as e:
-        messagebox.showerror("Error", f"No se pudo exportar la base de datos: {str(e)}")
-    finally:
-        database.connect() # Reconectar para seguir trabajando
-
-def importar_base_datos():
-    """Permite importar una base de datos desde un archivo seleccionado por el usuario."""
-    ruta_importacion = filedialog.askopenfilename(
-        title="Importar Base de Datos",
-        filetypes=[("Archivos SQLite", "*.db"), ("Todos los archivos", "*.*")]
-    )
-    if not ruta_importacion:
-        return
-    try:
-        database.close()  # Cerrar conexión actual antes de sobrescribir
-        with open(ruta_importacion, "rb") as db_origen:
-            user_home = os.path.expanduser("~")
-            db_dir = os.path.join(user_home, "Desktop", "Clientes")
-            with open(db_dir, "wb") as db_destino:
-                db_destino.write(db_origen.read())
-        messagebox.showinfo("Éxito", "Base de datos importada correctamente.")
-        # Reconectar y reconfigurar la base de datos importada
-        database.connect() # Reconectar para seguir trabajando
-    except Exception as e:
-        messagebox.showerror("Error", f"No se pudo importar la base de datos: {str(e)}")
 
 
 def ordenar_columnas(col):
@@ -390,20 +455,12 @@ ttk.Button(ventana, text="Eliminar Cliente", command=eliminar_cliente).grid(row=
 label_status = ttk.Label(ventana, text="", font=("Helvetica", 12, "bold")) 
 label_status.grid(row=11, column=0, columnspan=2)
 
-# Botones para gestionar documentos
-ttk.Button(ventana, text="Agregar Documento", command=agregar_documento).grid(row=18, column=0, columnspan=1)
-ttk.Button(ventana, text="Ver Documentos", command=mostrar_documentos).grid(row=18, column=1, columnspan=1)
-
 # Tabla para resultados
 tree = ttk.Treeview(ventana, columns=("Nombre", "Apellido", "Ciudad", "Email", "Telefono", "Tipo", "FechaCreacion"), show="headings", height=20)
 tree.grid(row=15, column=0, columnspan=2)
 for col in tree["columns"]:
     tree.heading(col, text=col)
     tree.heading(col, text=col, command=lambda _col=col: ordenar_columnas(_col))
-
-# Botones para exportar e importar la base de datos
-ttk.Button(ventana, text="Exportar Base de Datos", command=exportar_base_datos).grid(row=20, column=0, columnspan=1)
-ttk.Button(ventana, text="Importar Base de Datos", command=importar_base_datos).grid(row=20, column=1, columnspan=1)
 
 cargar_todos_los_clientes()  # Cargar todos los clientes en la tabla
 
